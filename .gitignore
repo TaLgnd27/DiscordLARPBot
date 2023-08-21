@@ -12,6 +12,7 @@ target/
 *.iml
 *.ipr
 *.env
+savedLink.txt
 
 ### Eclipse ###
 .apt_generated
