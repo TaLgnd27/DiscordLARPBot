@@ -3,15 +3,11 @@ package com.SStevens.LARPBot;
 import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.requests.Route;
 import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder;
 import net.dv8tion.jda.api.sharding.ShardManager;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
 import javax.security.auth.login.LoginException;
@@ -19,9 +15,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.channels.Channels;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class CourierBot {
 
@@ -39,74 +38,53 @@ public class CourierBot {
         shardManager = builder.build();
     }
 
+    @SuppressWarnings("unused")
     public ShardManager getShardManager(){
         return shardManager;
     }
 
+    @SuppressWarnings("unused")
     public Dotenv getConfig(){
         return config;
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        CourierBot bot = null;
+    static CourierBot bot;
+    public static void main(String[] args){
         try {
             bot = new CourierBot();
         } catch (LoginException e) {
             System.out.println("ERROR: Bot token is invalid!");
         }
 
-        while(true){
-            runLoop();
-            //run loop
-            File f = new File("savedLink.txt");
-            String link;
-            if(f.exists()){
-                link = loadLink();
-            } else {
-                link = getEventLink();
-            }
-            if(isValidLink(link)){
-                String message = "@everyone I've been looking for you. Got something I'm supposed to deliver - your hands only.\n" +
-                        link;
-                List<TextChannel> channels = bot.shardManager.getTextChannelsByName("Announcements", true);
-                for (TextChannel channel:
-                     channels) {
-                    channel.sendMessage(message).queue();
-                }
-                saveLink(link);
-            } else {
-                System.out.println("Invalid");
-            }
-
-            Thread.sleep(600000);
-        }
+        final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        @SuppressWarnings("unused")
+        final ScheduledFuture<?> botEventHandler = scheduler.scheduleAtFixedRate(CourierBot::run, 0, 1, TimeUnit.HOURS);
 
     }
 
     public static void saveLink(String link){
-        File f = new File("savedLink.txt");
         try {
             FileWriter myWriter = new FileWriter("savedLink.txt");
             myWriter.write(link);
             myWriter.close();
             System.out.println("Successfully wrote to the file.");
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
     }
     public static String loadLink(){
-        String out = "";
+        StringBuilder out = new StringBuilder();
         try {
             File myObj = new File("savedLink.txt");
             Scanner myReader = new Scanner(myObj);
             while (myReader.hasNextLine()) {
-                out += myReader.nextLine();
+                out.append(myReader.nextLine());
             }
             myReader.close();
         } catch (FileNotFoundException e) {
-            System.out.println("An error occurred.");
+            e.printStackTrace();
         }
-        return out;
+        return out.toString();
     }
 
     public static String getEventLink() {
@@ -117,11 +95,11 @@ public class CourierBot {
             e.printStackTrace();
         }
 
+        assert doc != null;
         Elements temp = doc.select("tr.item.thread.first");
         temp = temp.select("span.link.target > a");
-        String out = "https://lasthopelarp.proboards.com" + temp.attr("href");
 
-        return out;
+        return "https://lasthopelarp.proboards.com" + temp.attr("href");
     }
 
     public static boolean isValidLink(String s){
@@ -133,6 +111,7 @@ public class CourierBot {
             e.printStackTrace();
         }
 
+        assert doc != null;
         Elements temp = doc.select("div.message");
         String text = (temp.get(0)).text();
 
@@ -146,8 +125,24 @@ public class CourierBot {
         return out;
     }
 
-    public static void runLoop(){
-
+    public static void run() {
+        String link = getEventLink();
+        if(isValidLink(link)){
+            System.out.println(link);
+            String message = "@everyone I've been looking for you. Got something I'm supposed to deliver - your hands only.\n" +
+                    link;
+            List<TextChannel> channels = bot.shardManager.getTextChannelsByName("Announcements", true);
+            for (TextChannel channel:
+                    channels) {
+                try {
+                    channel.sendMessage(message).queue();
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+            saveLink(link);
+        } else {
+            System.out.println("Invalid");
+        }
     }
-
 }
