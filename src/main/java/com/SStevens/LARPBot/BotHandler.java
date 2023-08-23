@@ -15,27 +15,31 @@ class BotHandler implements Runnable {
 
     @Override
     public void run() {
-        try {
-            String link = getEventLink();
-            if (isValidLink(link)) {
-                System.out.println(link);
-                String message = "@everyone I've been looking for you. Got something I'm supposed to deliver - your hands only.\n" +
-                        link;
-                List<TextChannel> channels = bot.getShardManager().getTextChannelsByName("Announcements", true);
-                for (TextChannel channel :
-                        channels) {
-                    try {
-                        channel.sendMessage(message).queue();
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
+        if (isInternet()) {
+            try {
+                String link = getEventLink();
+                if (isValidLink(link)) {
+                    System.out.println(link);
+                    String message = "@everyone I've been looking for you. Got something I'm supposed to deliver - your hands only.\n" +
+                            link;
+                    List<TextChannel> channels = bot.getShardManager().getTextChannelsByName("Announcements", true);
+                    for (TextChannel channel :
+                            channels) {
+                        try {
+                            channel.sendMessage(message).queue();
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
                     }
+                    saveLink(link);
+                } else {
+                    System.out.println("Invalid");
                 }
-                saveLink(link);
-            } else {
-                System.out.println("Invalid");
+            } catch (Throwable t) {
+                LOGGER.log(Level.WARNING, Arrays.toString(t.getStackTrace()));
             }
-        } catch (Throwable t){
-            LOGGER.log(Level.WARNING, Arrays.toString(t.getStackTrace()));
+        } else {
+            System.out.println("Skipping cycle, no internet");
         }
     }
 }
