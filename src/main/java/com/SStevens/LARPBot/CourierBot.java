@@ -4,7 +4,6 @@ import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder;
 import net.dv8tion.jda.api.sharding.ShardManager;
 import org.jsoup.Jsoup;
@@ -16,13 +15,8 @@ import java.io.*;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import static java.util.logging.Logger.GLOBAL_LOGGER_NAME;
 
 public class CourierBot {
 
@@ -51,8 +45,8 @@ public class CourierBot {
     }
 
     static CourierBot bot;
-    private final static Logger LOGGER =
-            Logger.getLogger(GLOBAL_LOGGER_NAME);
+    static BotHandler botHandler;
+
     public static void main(String[] args){
         ScheduledFuture<?> botHandler = setup();
 
@@ -60,15 +54,12 @@ public class CourierBot {
         Scanner in = new Scanner(System.in);
         boolean isExit = false;
         while (!isExit){
-            try {
-                botHandler.get();
-            } catch (Exception e) {
-                botHandler = setup();
-            }
             if(in.nextLine().equalsIgnoreCase("exit")){
                 isExit = true;
             }
         }
+        System.out.println("Exiting program");
+        botHandler.cancel(true);
         System.exit(0);
     }
 
@@ -79,7 +70,7 @@ public class CourierBot {
             myWriter.close();
             System.out.println("Successfully wrote to the file.");
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, e.toString());
+            throw new RuntimeException(e);
         }
     }
     public static String loadLink(){
@@ -92,21 +83,19 @@ public class CourierBot {
             }
             myReader.close();
         } catch (FileNotFoundException e) {
-            LOGGER.log(Level.WARNING, e.toString());
+            throw new RuntimeException(e);
         }
         return out.toString();
     }
 
     public static String getEventLink() {
-        Document doc = null;
+        Document doc;
         try {
             doc = Jsoup.connect("https://lasthopelarp.proboards.com/board/6/upcoming-events").userAgent("mozilla/17.0").get();
         } catch (IOException e) {
-            bot.shardManager.shutdown();
-            LOGGER.log(Level.WARNING, e.toString());
+            throw new RuntimeException(e);
         }
 
-        assert doc != null;
         Elements temp = doc.select("tr.item.thread.first");
         temp = temp.select("span.link.target > a");
 
@@ -115,14 +104,13 @@ public class CourierBot {
 
     public static boolean isValidLink(String s){
         boolean out = true;
-        Document doc = null;
+        Document doc;
         try {
             doc = Jsoup.connect(s).userAgent("mozilla/17.0").get();
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, e.toString());
+            throw new RuntimeException(e);
         }
 
-        assert doc != null;
         Elements temp = doc.select("div.message");
         String text = (temp.get(0)).text();
 
@@ -136,37 +124,16 @@ public class CourierBot {
         return out;
     }
 
-    public static void run() {
-        String link = getEventLink();
-        if(isValidLink(link)){
-            System.out.println(link);
-            String message = "@everyone I've been looking for you. Got something I'm supposed to deliver - your hands only.\n" +
-                    link;
-            List<TextChannel> channels = bot.shardManager.getTextChannelsByName("Announcements", true);
-            for (TextChannel channel:
-                    channels) {
-                try {
-                    channel.sendMessage(message).queue();
-                } catch (Throwable t){
-                    LOGGER.log(Level.WARNING, t.toString());
-                }
-            }
-            saveLink(link);
-        } else {
-            System.out.println("Invalid");
-        }
-    }
-
     public static void ipNotif(){
         //get ip
-        String ip = "Unknown IP, eat shit";
+        String ip;
         try {
             URL whatismyip = new URI("https://checkip.amazonaws.com").toURL();
             BufferedReader in = new BufferedReader(new InputStreamReader(
                     whatismyip.openStream()));
             ip = in.readLine();
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, e.toString());
+            ip = "IP Unknown";
         }
         System.out.println(ip);
         User usr = bot.shardManager.retrieveUserById("343771474202722304").complete();
@@ -176,7 +143,6 @@ public class CourierBot {
     }
 
     public static boolean isInternet(){
-        System.out.println("Waiting for network");
         try {
             URL url = new URI("http://www.google.com").toURL();
             URLConnection connection = url.openConnection();
@@ -189,6 +155,7 @@ public class CourierBot {
     }
     public static ScheduledFuture<?> setup(){
         //wait for network
+        System.out.println("Waiting for network");
         while(true){
             if (isInternet()) break;
         }
@@ -205,7 +172,7 @@ public class CourierBot {
 
         //schedule bot checks
         final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
-        return scheduler.scheduleAtFixedRate(CourierBot::run, 0, 30, TimeUnit.MINUTES);
+        botHandler = new BotHandler();
+        return scheduler.scheduleAtFixedRate(botHandler, 0, 30, TimeUnit.MINUTES);
     }
 }
