@@ -19,6 +19,10 @@ import java.net.URLConnection;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static java.util.logging.Logger.GLOBAL_LOGGER_NAME;
 
 public class CourierBot {
 
@@ -47,6 +51,8 @@ public class CourierBot {
     }
 
     static CourierBot bot;
+    private final static Logger LOGGER =
+            Logger.getLogger(GLOBAL_LOGGER_NAME);
     public static void main(String[] args){
         ScheduledFuture<?> botHandler = setup();
 
@@ -73,7 +79,7 @@ public class CourierBot {
             myWriter.close();
             System.out.println("Successfully wrote to the file.");
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, e.toString());
         }
     }
     public static String loadLink(){
@@ -86,7 +92,7 @@ public class CourierBot {
             }
             myReader.close();
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, e.toString());
         }
         return out.toString();
     }
@@ -97,7 +103,7 @@ public class CourierBot {
             doc = Jsoup.connect("https://lasthopelarp.proboards.com/board/6/upcoming-events").userAgent("mozilla/17.0").get();
         } catch (IOException e) {
             bot.shardManager.shutdown();
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, e.toString());
         }
 
         assert doc != null;
@@ -113,7 +119,7 @@ public class CourierBot {
         try {
             doc = Jsoup.connect(s).userAgent("mozilla/17.0").get();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, e.toString());
         }
 
         assert doc != null;
@@ -141,8 +147,8 @@ public class CourierBot {
                     channels) {
                 try {
                     channel.sendMessage(message).queue();
-                } catch (Exception e){
-                    e.printStackTrace();
+                } catch (Throwable t){
+                    LOGGER.log(Level.WARNING, t.toString());
                 }
             }
             saveLink(link);
@@ -160,7 +166,7 @@ public class CourierBot {
                     whatismyip.openStream()));
             ip = in.readLine();
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, e.toString());
         }
         System.out.println(ip);
         User usr = bot.shardManager.retrieveUserById("343771474202722304").complete();
@@ -170,25 +176,21 @@ public class CourierBot {
     }
 
     public static boolean isInternet(){
+        System.out.println("Waiting for network");
         try {
-            URL url = new URL("http://www.google.com");
+            URL url = new URI("http://www.google.com").toURL();
             URLConnection connection = url.openConnection();
             connection.connect();
             System.out.println("Internet is connected");
             return true;
         } catch (Exception e) {
-            System.out.println("No Internet");
             return false;
         }
     }
     public static ScheduledFuture<?> setup(){
         //wait for network
-        while(!isInternet()){
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        while(true){
+            if (isInternet()) break;
         }
 
         //start bot
@@ -203,8 +205,7 @@ public class CourierBot {
 
         //schedule bot checks
         final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-        final ScheduledFuture<?> botHandler = scheduler.scheduleAtFixedRate(CourierBot::run, 0, 10, TimeUnit.SECONDS);
 
-        return botHandler;
+        return scheduler.scheduleAtFixedRate(CourierBot::run, 0, 30, TimeUnit.MINUTES);
     }
 }
