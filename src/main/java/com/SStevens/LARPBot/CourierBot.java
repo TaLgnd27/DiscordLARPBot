@@ -3,6 +3,7 @@ package com.SStevens.LARPBot;
 import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder;
 import net.dv8tion.jda.api.sharding.ShardManager;
@@ -11,16 +12,16 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
 import javax.security.auth.login.LoginException;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.net.URI;
+import java.net.URL;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
+import static java.lang.System.exit;
 
 public class CourierBot {
 
@@ -57,9 +58,17 @@ public class CourierBot {
         }
 
         final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-        @SuppressWarnings("unused")
-        final ScheduledFuture<?> botEventHandler = scheduler.scheduleAtFixedRate(CourierBot::run, 0, 1, TimeUnit.HOURS);
-
+        ipNotif();
+        scheduler.scheduleAtFixedRate(CourierBot::run, 0, 1, TimeUnit.HOURS);
+        //exit
+        Scanner in = new Scanner(System.in);
+        boolean isExit = false;
+        while (!isExit){
+            if(in.nextLine().equalsIgnoreCase("exit")){
+                isExit = true;
+            }
+        }
+        System.exit(0);
     }
 
     public static void saveLink(String link){
@@ -144,5 +153,23 @@ public class CourierBot {
         } else {
             System.out.println("Invalid");
         }
+    }
+
+    public static void ipNotif(){
+        //get ip
+        String ip = "Unknown IP, eat shit";
+        try {
+            URL whatismyip = new URI("https://checkip.amazonaws.com").toURL();
+            BufferedReader in = new BufferedReader(new InputStreamReader(
+                    whatismyip.openStream()));
+            ip = in.readLine();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        System.out.println(ip);
+        User usr = bot.shardManager.retrieveUserById("343771474202722304").complete();
+        String finalIp = ip;
+        usr.openPrivateChannel().flatMap(channel -> channel.sendMessage("Here is my new IP: " + finalIp)).queue();
+
     }
 }
