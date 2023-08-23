@@ -15,13 +15,10 @@ import javax.security.auth.login.LoginException;
 import java.io.*;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.List;
 import java.util.Scanner;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import static java.lang.System.exit;
+import java.util.concurrent.*;
 
 public class CourierBot {
 
@@ -51,19 +48,17 @@ public class CourierBot {
 
     static CourierBot bot;
     public static void main(String[] args){
-        try {
-            bot = new CourierBot();
-        } catch (LoginException e) {
-            System.out.println("ERROR: Bot token is invalid!");
-        }
+        ScheduledFuture<?> botHandler = setup();
 
-        final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-        ipNotif();
-        scheduler.scheduleAtFixedRate(CourierBot::run, 0, 1, TimeUnit.HOURS);
-        //exit
+        //exit check
         Scanner in = new Scanner(System.in);
         boolean isExit = false;
         while (!isExit){
+            try {
+                botHandler.get();
+            } catch (Exception e) {
+                botHandler = setup();
+            }
             if(in.nextLine().equalsIgnoreCase("exit")){
                 isExit = true;
             }
@@ -101,6 +96,7 @@ public class CourierBot {
         try {
             doc = Jsoup.connect("https://lasthopelarp.proboards.com/board/6/upcoming-events").userAgent("mozilla/17.0").get();
         } catch (IOException e) {
+            bot.shardManager.shutdown();
             e.printStackTrace();
         }
 
@@ -171,5 +167,44 @@ public class CourierBot {
         String finalIp = ip;
         usr.openPrivateChannel().flatMap(channel -> channel.sendMessage("Here is my new IP: " + finalIp)).queue();
 
+    }
+
+    public static boolean isInternet(){
+        try {
+            URL url = new URL("http://www.google.com");
+            URLConnection connection = url.openConnection();
+            connection.connect();
+            System.out.println("Internet is connected");
+            return true;
+        } catch (Exception e) {
+            System.out.println("No Internet");
+            return false;
+        }
+    }
+    public static ScheduledFuture<?> setup(){
+        //wait for network
+        while(!isInternet()){
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        //start bot
+        try {
+            bot = new CourierBot();
+        } catch (LoginException e) {
+            System.out.println("ERROR: Bot token is invalid!");
+        }
+
+        //send IP
+        ipNotif();
+
+        //schedule bot checks
+        final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        final ScheduledFuture<?> botHandler = scheduler.scheduleAtFixedRate(CourierBot::run, 0, 10, TimeUnit.SECONDS);
+
+        return botHandler;
     }
 }
