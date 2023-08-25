@@ -124,21 +124,23 @@ public class CourierBot {
         return out;
     }
 
-    public static void ipNotif(){
+    public static String getIP(){
         //get ip
-        String ip;
         try {
             URL whatismyip = new URI("https://checkip.amazonaws.com").toURL();
             BufferedReader in = new BufferedReader(new InputStreamReader(
                     whatismyip.openStream()));
-            ip = in.readLine();
+            return  in.readLine();
         } catch (Exception e) {
-            ip = "IP Unknown";
+            return  "IP Unknown";
         }
+    }
+
+    public static void ipNotif(){
+        String ip = getIP();
         System.out.println(ip);
         User usr = bot.shardManager.retrieveUserById("343771474202722304").complete();
-        String finalIp = ip;
-        usr.openPrivateChannel().flatMap(channel -> channel.sendMessage("Here is my new IP: " + finalIp)).queue();
+        usr.openPrivateChannel().flatMap(channel -> channel.sendMessage("Here is my new IP: " + ip)).queue();
 
     }
 
@@ -166,9 +168,6 @@ public class CourierBot {
         } catch (LoginException e) {
             System.out.println("ERROR: Bot token is invalid!");
         }
-
-        //send IP
-        ipNotif();
 
         //schedule bot checks
         final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);

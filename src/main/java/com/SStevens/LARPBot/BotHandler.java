@@ -13,9 +13,16 @@ class BotHandler implements Runnable {
     private final static Logger LOGGER =
             Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
+    String ip;
+
     @Override
     public void run() {
         if (isInternet()) {
+            String prevIP = ip;
+            ip = getIP();
+            if(!ip.equals(prevIP)){
+                ipNotif();
+            }
             try {
                 String link = getEventLink();
                 if (isValidLink(link)) {
@@ -40,6 +47,7 @@ class BotHandler implements Runnable {
             }
         } else {
             System.out.println("Skipping cycle, no internet");
+
         }
     }
 }
