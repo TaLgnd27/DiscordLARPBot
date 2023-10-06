@@ -10,13 +10,15 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
-import javax.security.auth.login.LoginException;
 import java.io.*;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Scanner;
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class CourierBot {
 
@@ -24,10 +26,9 @@ public class CourierBot {
 
     private final Dotenv config;
 
-    public CourierBot() throws LoginException {
+    public CourierBot() {
         config = Dotenv.configure().load();
         String token = config.get("TOKEN");
-
         DefaultShardManagerBuilder builder = DefaultShardManagerBuilder.createDefault(token);
         builder.setStatus(OnlineStatus.IDLE);
         builder.setActivity(Activity.listening("the greatest information networks"));
@@ -83,7 +84,7 @@ public class CourierBot {
             }
             myReader.close();
         } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
         return out.toString();
     }
@@ -136,7 +137,7 @@ public class CourierBot {
         }
     }
 
-    public static void ipNotif(){
+    public static void ipNotify(){
         String ip = getIP();
         System.out.println(ip);
         User usr = bot.shardManager.retrieveUserById("343771474202722304").complete();
@@ -165,13 +166,13 @@ public class CourierBot {
         //start bot
         try {
             bot = new CourierBot();
-        } catch (LoginException e) {
-            System.out.println("ERROR: Bot token is invalid!");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
 
         //schedule bot checks
         final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         botHandler = new BotHandler();
-        return scheduler.scheduleAtFixedRate(botHandler, 0, 30, TimeUnit.MINUTES);
+        return scheduler.scheduleAtFixedRate(botHandler, 0, 10, TimeUnit.SECONDS);
     }
 }

@@ -21,7 +21,7 @@ class BotHandler implements Runnable {
             String prevIP = ip;
             ip = getIP();
             if(!ip.equals(prevIP)){
-                ipNotif();
+                ipNotify();
             }
             try {
                 String link = getEventLink();
@@ -35,9 +35,10 @@ class BotHandler implements Runnable {
                         try {
                             channel.sendMessage(message).queue();
                         } catch (Exception e) {
-                            throw new RuntimeException(e);
+                            e.printStackTrace();
                         }
                     }
+                    System.out.println("Saving Link");
                     saveLink(link);
                 } else {
                     System.out.println("Invalid");
