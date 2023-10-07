@@ -173,6 +173,6 @@ public class CourierBot {
         //schedule bot checks
         final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         botHandler = new BotHandler();
-        return scheduler.scheduleAtFixedRate(botHandler, 0, 10, TimeUnit.SECONDS);
+        return scheduler.scheduleAtFixedRate(botHandler, 0, 30, TimeUnit.MINUTES);
     }
 }
