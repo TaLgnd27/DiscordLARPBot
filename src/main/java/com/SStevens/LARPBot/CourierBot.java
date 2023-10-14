@@ -132,8 +132,14 @@ public class CourierBot {
         while(true) {
             try {
                 bot = new CourierBot();
+                Thread.sleep(TimeUnit.MINUTES.toMillis(1));
                 break;
             } catch (Exception e) {
+                try {
+                    Thread.sleep(TimeUnit.MINUTES.toMillis(1));
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
             }
         }
 
