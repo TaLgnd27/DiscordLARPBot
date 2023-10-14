@@ -11,9 +11,11 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.spi.InetAddressResolver;
 import java.util.Scanner;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -125,49 +127,14 @@ public class CourierBot {
         return out;
     }
 
-    public static String getIP(){
-        //get ip
-        try {
-            URL whatismyip = new URI("https://checkip.amazonaws.com").toURL();
-            BufferedReader in = new BufferedReader(new InputStreamReader(
-                    whatismyip.openStream()));
-            return  in.readLine();
-        } catch (Exception e) {
-            return  "IP Unknown";
-        }
-    }
-
-    public static void ipNotify(){
-        String ip = getIP();
-        System.out.println(ip);
-        User usr = bot.shardManager.retrieveUserById("343771474202722304").complete();
-        usr.openPrivateChannel().flatMap(channel -> channel.sendMessage("Here is my new IP: " + ip)).queue();
-
-    }
-
-    public static boolean isInternet(){
-        try {
-            URL url = new URI("http://www.google.com").toURL();
-            URLConnection connection = url.openConnection();
-            connection.connect();
-            System.out.println("Internet is connected");
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
     public static ScheduledFuture<?> setup(){
-        //wait for network
-        System.out.println("Waiting for network");
-        while(true){
-            if (isInternet()) break;
-        }
-
-        //start bot
-        try {
-            bot = new CourierBot();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        //start bot loop
+        while(true) {
+            try {
+                bot = new CourierBot();
+                break;
+            } catch (Exception e) {
+            }
         }
 
         //schedule bot checks
