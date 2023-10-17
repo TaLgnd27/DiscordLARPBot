@@ -61,7 +61,7 @@ public class CourierBot {
                 isExit = true;
             }
         }
-        System.out.println("Exiting program");
+        System.out.println(java.time.LocalDateTime.now() + ": Exiting program");
         botHandler.cancel(true);
         System.exit(0);
     }
@@ -71,7 +71,7 @@ public class CourierBot {
             FileWriter myWriter = new FileWriter("savedLink.txt");
             myWriter.write(link);
             myWriter.close();
-            System.out.println("Successfully wrote to the file.");
+            System.out.println(java.time.LocalDateTime.now() + ": Successfully wrote to the file.");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
